@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Bit Hot Wheels Stoplight</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+        }
+
+        .track-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .track-container svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .container {
+            text-align: center;
+            z-index: 100;
+            position: relative;
+        }
+
+        h1 {
+            color: #ff6b00;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            text-shadow: 3px 3px 0px #000, -1px -1px 0px #ffaa00;
+            letter-spacing: 2px;
+        }
+
+        .stoplight {
+            background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+            padding: 12px;
+            display: inline-block;
+            border: 6px solid #1a1a1a;
+            box-shadow:
+                6px 6px 0px #000,
+                inset -3px -3px 0px #222,
+                inset 3px 3px 0px #555;
+        }
+
+        .light {
+            width: 60px;
+            height: 60px;
+            margin: 8px 0;
+            cursor: pointer;
+            border: 4px solid #111;
+            position: relative;
+            box-shadow:
+                inset -3px -3px 0px rgba(0,0,0,0.5),
+                inset 3px 3px 0px rgba(255,255,255,0.1);
+        }
+
+        .light:hover {
+            filter: brightness(1.2);
+        }
+
+        .light::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.4);
+        }
+
+        .red { background-color: #3a1515; }
+        .red.on {
+            background-color: #e43b44;
+            box-shadow: 0 0 0 3px #ff8080, 0 0 20px #ff0000,
+                inset -3px -3px 0px #a02030, inset 3px 3px 0px #ff6060;
+        }
+
+        .yellow { background-color: #3a3515; }
+        .yellow.on {
+            background-color: #fbf236;
+            box-shadow: 0 0 0 3px #ffff80, 0 0 20px #ffcc00,
+                inset -3px -3px 0px #b0a020, inset 3px 3px 0px #ffff60;
+        }
+
+        .green { background-color: #153a15; }
+        .green.on {
+            background-color: #99e550;
+            box-shadow: 0 0 0 3px #c0ff80, 0 0 20px #00ff00,
+                inset -3px -3px 0px #50a030, inset 3px 3px 0px #b0ff60;
+        }
+
+        .pole {
+            width: 16px;
+            height: 80px;
+            background: linear-gradient(90deg, #3a3a3a 0%, #555 50%, #3a3a3a 100%);
+            margin: 0 auto;
+            border: 3px solid #222;
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .base {
+            width: 60px;
+            height: 16px;
+            background: #3a3a3a;
+            margin: 0 auto;
+            border: 3px solid #222;
+            box-shadow: 6px 6px 0px #000;
+        }
+
+        .instructions {
+            color: #ff6b00;
+            margin-top: 20px;
+            font-size: 0.4rem;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.1) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            animation: twinkle 2s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+
+    <div class="track-container">
+        <svg id="trackSvg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet">
+            <defs>
+                <!-- Track rail gradient -->
+                <linearGradient id="railGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#ff8c00"/>
+                    <stop offset="50%" stop-color="#ff6b00"/>
+                    <stop offset="100%" stop-color="#cc4400"/>
+                </linearGradient>
+                <!-- Support gradient -->
+                <linearGradient id="supportGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#555"/>
+                    <stop offset="50%" stop-color="#777"/>
+                    <stop offset="100%" stop-color="#444"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Ground/floor -->
+            <rect x="0" y="620" width="1200" height="80" fill="#1a1a2e"/>
+
+            <!-- ====== SUPPORTS (behind tracks) ====== -->
+            <g id="supports">
+                <!-- Bottom track supports -->
+                <g class="support-group">
+                    <rect x="195" y="540" width="12" height="80" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="188" y="535" width="26" height="10" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+                <g class="support-group">
+                    <rect x="395" y="540" width="12" height="80" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="388" y="535" width="26" height="10" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+                <g class="support-group">
+                    <rect x="795" y="540" width="12" height="80" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="788" y="535" width="26" height="10" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+                <g class="support-group">
+                    <rect x="995" y="540" width="12" height="80" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="988" y="535" width="26" height="10" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+
+                <!-- Upper track supports (taller) -->
+                <g class="support-group">
+                    <rect x="294" y="320" width="14" height="300" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="286" y="315" width="30" height="12" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+                <g class="support-group">
+                    <rect x="594" y="250" width="14" height="370" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="586" y="245" width="30" height="12" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+                <g class="support-group">
+                    <rect x="894" y="320" width="14" height="300" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="886" y="315" width="30" height="12" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+
+                <!-- Loop supports -->
+                <g class="support-group">
+                    <rect x="144" y="280" width="14" height="340" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="136" y="275" width="30" height="12" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+                <g class="support-group">
+                    <rect x="1044" y="280" width="14" height="340" fill="url(#supportGrad)" stroke="#333" stroke-width="2"/>
+                    <rect x="1036" y="275" width="30" height="12" fill="#666" stroke="#333" stroke-width="1"/>
+                </g>
+            </g>
+
+            <!-- ====== BOTTOM TRACK (figure 8 with loops) ====== -->
+            <!-- Back of left loop (darker, behind) -->
+            <ellipse cx="150" cy="380" rx="80" ry="100" fill="none" stroke="#993300" stroke-width="24"
+                     stroke-dasharray="290 290" stroke-dashoffset="145" opacity="0.7"/>
+            <ellipse cx="150" cy="380" rx="80" ry="100" fill="none" stroke="#1a1a1a" stroke-width="16"
+                     stroke-dasharray="290 290" stroke-dashoffset="145" opacity="0.7"/>
+
+            <!-- Back of right loop (darker, behind) -->
+            <ellipse cx="1050" cy="380" rx="80" ry="100" fill="none" stroke="#993300" stroke-width="24"
+                     stroke-dasharray="290 290" stroke-dashoffset="145" opacity="0.7"/>
+            <ellipse cx="1050" cy="380" rx="80" ry="100" fill="none" stroke="#1a1a1a" stroke-width="16"
+                     stroke-dasharray="290 290" stroke-dashoffset="145" opacity="0.7"/>
+
+            <!-- Main bottom track path -->
+            <path id="bottomTrack" fill="none" stroke="url(#railGrad)" stroke-width="24" stroke-linecap="round" d="
+                M 150,480
+                L 150,540
+                L 1050,540
+                L 1050,480
+            "/>
+            <path fill="none" stroke="#1a1a1a" stroke-width="16" stroke-linecap="round" d="
+                M 150,480
+                L 150,540
+                L 1050,540
+                L 1050,480
+            "/>
+            <path fill="none" stroke="#ff9500" stroke-width="2" stroke-dasharray="12 8" d="
+                M 150,480
+                L 150,540
+                L 1050,540
+                L 1050,480
+            "/>
+
+            <!-- Front of left loop -->
+            <ellipse cx="150" cy="380" rx="80" ry="100" fill="none" stroke="url(#railGrad)" stroke-width="24"
+                     stroke-dasharray="290 290" stroke-dashoffset="-145"/>
+            <ellipse cx="150" cy="380" rx="80" ry="100" fill="none" stroke="#1a1a1a" stroke-width="16"
+                     stroke-dasharray="290 290" stroke-dashoffset="-145"/>
+
+            <!-- Front of right loop -->
+            <ellipse cx="1050" cy="380" rx="80" ry="100" fill="none" stroke="url(#railGrad)" stroke-width="24"
+                     stroke-dasharray="290 290" stroke-dashoffset="-145"/>
+            <ellipse cx="1050" cy="380" rx="80" ry="100" fill="none" stroke="#1a1a1a" stroke-width="16"
+                     stroke-dasharray="290 290" stroke-dashoffset="-145"/>
+
+            <!-- ====== UPPER TRACK (elevated oval) ====== -->
+            <path id="upperTrack" fill="none" stroke="url(#railGrad)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" d="
+                M 300,320
+                Q 300,250 400,250
+                L 800,250
+                Q 900,250 900,320
+                L 900,400
+                Q 900,470 800,470
+                L 400,470
+                Q 300,470 300,400
+                Z
+            "/>
+            <path fill="none" stroke="#1a1a1a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" d="
+                M 300,320
+                Q 300,250 400,250
+                L 800,250
+                Q 900,250 900,320
+                L 900,400
+                Q 900,470 800,470
+                L 400,470
+                Q 300,470 300,400
+                Z
+            "/>
+            <path fill="none" stroke="#ff9500" stroke-width="2" stroke-dasharray="12 8" d="
+                M 300,320
+                Q 300,250 400,250
+                L 800,250
+                Q 900,250 900,320
+                L 900,400
+                Q 900,470 800,470
+                L 400,470
+                Q 300,470 300,400
+                Z
+            "/>
+
+            <!-- ====== VEHICLES (rendered in SVG for proper path following) ====== -->
+            <g id="vehicles"></g>
+        </svg>
+    </div>
+
+    <div class="container">
+        <h1>HOT WHEELS</h1>
+        <div class="stoplight">
+            <div class="light red on" onclick="toggleLight('red')"></div>
+            <div class="light yellow" onclick="toggleLight('yellow')"></div>
+            <div class="light green" onclick="toggleLight('green')"></div>
+        </div>
+        <div class="pole"></div>
+        <div class="base"></div>
+        <p class="instructions">CLICK TO CONTROL TRAFFIC</p>
+    </div>
+
+    <div class="scanlines"></div>
+
+    <script>
+        let currentLight = 'red';
+        let vehicles = [];
+        let animationId;
+
+        const carColors = ['#e43b44', '#0095e9', '#99e550', '#fbf236', '#9b59b6', '#ff6b00'];
+
+        // Create stars
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 50; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 50 + '%';
+            star.style.animationDelay = Math.random() * 2 + 's';
+            star.style.width = (2 + Math.random() * 3) + 'px';
+            star.style.height = star.style.width;
+            starsContainer.appendChild(star);
+        }
+
+        const svg = document.getElementById('trackSvg');
+        const vehiclesGroup = document.getElementById('vehicles');
+        const bottomTrackPath = document.getElementById('bottomTrack');
+        const upperTrackPath = document.getElementById('upperTrack');
+
+        // Create SVG car element
+        function createCarSvg(color) {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            // Car body
+            const body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            body.setAttribute('x', '-12');
+            body.setAttribute('y', '-5');
+            body.setAttribute('width', '24');
+            body.setAttribute('height', '10');
+            body.setAttribute('fill', color);
+            body.setAttribute('stroke', '#111');
+            body.setAttribute('stroke-width', '2');
+
+            // Cabin
+            const cabin = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            cabin.setAttribute('x', '-4');
+            cabin.setAttribute('y', '-9');
+            cabin.setAttribute('width', '10');
+            cabin.setAttribute('height', '6');
+            cabin.setAttribute('fill', '#87ceeb');
+            cabin.setAttribute('stroke', '#111');
+            cabin.setAttribute('stroke-width', '1');
+
+            // Wheels
+            const wheel1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            wheel1.setAttribute('x', '-10');
+            wheel1.setAttribute('y', '3');
+            wheel1.setAttribute('width', '6');
+            wheel1.setAttribute('height', '5');
+            wheel1.setAttribute('fill', '#111');
+
+            const wheel2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            wheel2.setAttribute('x', '4');
+            wheel2.setAttribute('y', '3');
+            wheel2.setAttribute('width', '6');
+            wheel2.setAttribute('height', '5');
+            wheel2.setAttribute('fill', '#111');
+
+            g.appendChild(body);
+            g.appendChild(cabin);
+            g.appendChild(wheel1);
+            g.appendChild(wheel2);
+
+            return g;
+        }
+
+        function getPointOnPath(path, progress) {
+            const length = path.getTotalLength();
+            const point = path.getPointAtLength((progress % 1) * length);
+
+            // Get tangent for rotation
+            const delta = 0.001;
+            const p1 = path.getPointAtLength(Math.max(0, ((progress % 1) - delta)) * length);
+            const p2 = path.getPointAtLength(Math.min(1, ((progress % 1) + delta)) * length);
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+
+            return { x: point.x, y: point.y, angle: angle };
+        }
+
+        function createVehicle(trackPath, offset, speed, trackType) {
+            const color = carColors[Math.floor(Math.random() * carColors.length)];
+            const carElement = createCarSvg(color);
+            vehiclesGroup.appendChild(carElement);
+
+            return {
+                element: carElement,
+                path: trackPath,
+                progress: offset,
+                baseSpeed: speed,
+                trackType: trackType
+            };
+        }
+
+        function initVehicles() {
+            // Vehicles on bottom track (with loops)
+            for (let i = 0; i < 5; i++) {
+                vehicles.push(createVehicle(bottomTrackPath, i / 5, 0.002, 'bottom'));
+            }
+
+            // Vehicles on upper track
+            for (let i = 0; i < 4; i++) {
+                vehicles.push(createVehicle(upperTrackPath, i / 4, 0.0025, 'upper'));
+            }
+        }
+
+        function getSpeedMultiplier() {
+            switch (currentLight) {
+                case 'red': return 0;
+                case 'yellow': return 0.3;
+                case 'green': return 1;
+                default: return 0;
+            }
+        }
+
+        function updateVehicles() {
+            const speedMultiplier = getSpeedMultiplier();
+
+            vehicles.forEach(vehicle => {
+                vehicle.progress += vehicle.baseSpeed * speedMultiplier;
+                if (vehicle.progress > 1) vehicle.progress -= 1;
+
+                const pos = getPointOnPath(vehicle.path, vehicle.progress);
+
+                // Scale based on vertical position for depth
+                const scale = 0.6 + (pos.y / 700) * 0.6;
+
+                vehicle.element.setAttribute('transform',
+                    `translate(${pos.x}, ${pos.y}) rotate(${pos.angle}) scale(${scale})`
+                );
+            });
+
+            animationId = requestAnimationFrame(updateVehicles);
+        }
+
+        function toggleLight(color) {
+            document.querySelectorAll('.light').forEach(light => {
+                light.classList.remove('on');
+            });
+
+            if (currentLight === color) {
+                currentLight = 'none';
+            } else {
+                document.querySelector(`.light.${color}`).classList.add('on');
+                currentLight = color;
+            }
+        }
+
+        // Initialize
+        setTimeout(() => {
+            initVehicles();
+            updateVehicles();
+        }, 100);
+    </script>
+</body>
+</html>
